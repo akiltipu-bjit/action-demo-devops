@@ -1,0 +1,25 @@
+name: Publish build artifact
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Retrieve package from Build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-dist
+          path: dist/
+      - name: Inspect retrieved package
+        run: ls -lh dist/
+      - name: Publish to GitHub Actions artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hello-world-package
+          path: dist/
+          if-no-files-found: error
