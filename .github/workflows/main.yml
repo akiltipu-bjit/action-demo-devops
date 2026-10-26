@@ -12,81 +12,38 @@ on:
         required: true
         default: '3.12'
 
+permissions:
+  contents: read
+
+# Reusable workflows are called at the job level using local file paths.
 jobs:
   lint:
     name: Pylint Check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Get source code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ github.event.inputs.python-version }}
-      - name: Install Pylint
-        run: python -m pip install pylint
-      - name: Check code quality
-        run: pylint main.py test_main.py
+    uses: ./.github/workflows/lint.yaml
+    with:
+      python-version: ${{ inputs.python-version || '3.12' }}
 
   test:
     name: Run tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Get source code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ github.event.inputs.python-version }}
-      - name: Install pytest
-        run: python -m pip install pytest
-      - name: Run Hello World app
-        run: python main.py
-      - name: Run automated tests
-        run: python -m pytest -v
- 
+    uses: ./.github/workflows/test.yaml
+    with:
+      python-version: ${{ inputs.python-version || '3.12' }}
+
+  security:
+    name: Check code and dependency vulnerabilities
+    uses: ./.github/workflows/security.yml
+    with:
+      python-version: ${{ inputs.python-version || '3.12' }}
+
   build:
     name: Build Python package
-    needs: [lint, test]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Get source code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install build tool
-        run: python -m pip install build
-      - name: Build wheel and source archive
-        run: python -m build
- 
-      - name: Show build output
-        run: ls -lh dist/
- 
-      - name: Save build for next job
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-dist
-          path: dist/
-          if-no-files-found: error
- 
+    needs: [lint, test, security]
+    uses: ./.github/workflows/build.yml
+    with:
+      python-version: ${{ inputs.python-version || '3.12' }}
+
   publish:
     name: Publish build artifact
     needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Retrieve package from Build
-        uses: actions/download-artifact@v4
-        with:
-          name: build-dist
-          path: dist/
-      - name: Inspect retrieved package
-        run: ls -lh dist/
-      - name: Publish to GitHub Actions artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: hello-world-package
-          path: dist/
-          if-no-files-found: error
+    uses: ./.github/workflows/publish.yml
 
